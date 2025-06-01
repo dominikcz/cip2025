@@ -8,8 +8,8 @@ import string
 # just for debugging
 # db_set("lvl_1", None)
 
-EASY = 1
-NORMAL = 0
+EASY = "EASY"
+NORMAL = "NORMAL"
 
 CANVAS_WIDTH = 1000
 CANVAS_HEIGHT = 600
@@ -136,9 +136,8 @@ def get_user_name(canvas, name):
     dialog_shapes.append(canvas.create_rectangle(x - w / 2, y, x + w / 2, y + h, "white", "black"))
     dialog_shapes.append(canvas.create_text(x, y + 30, "Please enter your name and hit [Enter]", anchor="center", font_size=28) )
     dialog_shapes.append(canvas.create_rectangle(text_x1, y + 100, text_x1 + 10 *30, y + 140, "black"))
-    input_txt = ""
-    name_obj = canvas.create_text(text_x1 + 10, y + 120, input_txt, anchor="w", font_size = 28, color="white", font="Courier")
-    text_w = get_text_width(input_txt, 28)
+    name_obj = canvas.create_text(text_x1 + 10, y + 120, name, anchor="w", font_size = 28, color="white", font="Courier")
+    text_w = get_text_width(name, 28)
     cursor = canvas.create_rectangle(text_x1 + 10 + text_w, y+110, text_x1 + 10 + text_w + 4, y+110 + 28*0.75, "white")
     dialog_shapes.append(name_obj)
     dialog_shapes.append(cursor)
@@ -155,26 +154,25 @@ def get_user_name(canvas, name):
 
         key = canvas.get_last_key_press()
         if key != None:
-            if len(key) == 1 and len(input_txt) < 16:
-                input_txt += key
+            if len(key) == 1 and len(name) < 16:
+                name += key
             elif key == "Backspace":
-                input_txt = input_txt[:-1]
+                name = name[:-1]
             if key == "Enter":
                 break
-            canvas.change_text(name_obj, input_txt)
-            text_w = get_text_width(input_txt, 28)
+            canvas.change_text(name_obj, name)
+            text_w = get_text_width(name, 28)
             canvas.moveto(cursor, text_x1 + 10 + text_w, y + 110)
 
     # cleanup
     for obj in dialog_shapes:
         canvas.delete(obj)
 
-    return input_txt
+    return name
 
 def print_hof(canvas, y, lvl, hof, time, rules):
     x = CANVAS_WIDTH /2
-    rules_str = get_rules_str(rules)
-    canvas.create_text(x, y, f"Level {lvl - 2} Hall of Fame ({rules_str})", font_size = 24, anchor="center")
+    canvas.create_text(x, y, f"Level {lvl - 2} Hall of Fame ({rules})", font_size = 24, anchor="center")
     y = y + 30
     for i in range(len(hof)):
         entry = hof[i]
@@ -313,25 +311,17 @@ def select_tube(tubes, x, y):
             return tube
     return None
 
-def get_rules_str(rules):
-    if rules == EASY:
-        rules_str = "EASY"
-    else:
-        rules_str = "NORMAL"
-    return rules_str
-
 def init_lvl(canvas, rules, lvl, max_lvl, score, moves):
     # set lvl between 3 and len(COLORS_AVAILABLE)
     canvas.clear()
     tubes = []
-    rules_str = get_rules_str(rules)
     lvl = max(min(len(COLORS_AVAILABLE), lvl), 3)
     picked_colors = get_random_colors(lvl)
     balls = prepare_random_balls(BALLS_PER_TUBE, picked_colors)
     tubes_needed = lvl + 2 # we need 2 more tubes
     draw_centered_tubes(canvas, tubes_needed, balls, tubes)
     level_text = canvas.create_text(10, 10, f"Level: {lvl - 2} / {max_lvl - 2}", font_size = 32)
-    canvas.create_text(CANVAS_WIDTH / 2, 10, f"Rules: {rules_str}", anchor="n", font_size = 32)
+    canvas.create_text(CANVAS_WIDTH / 2, 10, f"Rules: {rules}", anchor="n", font_size = 32)
     score_text = canvas.create_text(CANVAS_WIDTH - 10, 10, get_score_text(score), font_size = 32, anchor = "ne")
     moves_text = canvas.create_text(10, CANVAS_HEIGHT - 42, get_moves_text(moves), font_size = 32)
     return (tubes, level_text, score_text, moves_text)
