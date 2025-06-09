@@ -25,6 +25,7 @@ DR2 = TUBE_RIM + 3
 
 BALLS_PER_TUBE = 4
 COLORS_AVAILABLE = ["#029E73", "#D55E00", "#CC78BC", "#CA9161", "#FBAFE4", "#949494", "#ECE133", "#56B4E9", "#0173B2", "#DE8F05"]
+MAX_LVL = 8
 
 HOF_MAX_LEN = 10
 
@@ -33,15 +34,13 @@ def main():
     total_time = 0
 
     name = ''
-    lvl = 3
-    max_lvl = len(COLORS_AVAILABLE)
-    intro(canvas, max_lvl)
-    rules = choose_rules(canvas)
+    intro(canvas, MAX_LVL)
+    rules, lvl = choose_rules(canvas)
     score = 0
 
-    while lvl <= max_lvl:
+    while lvl <= MAX_LVL:
         moves = 0
-        tubes, level_text, score_text, moves_text = init_lvl(canvas, rules, lvl, max_lvl, score, moves)
+        tubes, level_text, score_text, moves_text, restart_lvl = init_lvl(canvas, rules, lvl, MAX_LVL, score, moves)
 
         selection_seq = 1
         tube1 = None
@@ -52,8 +51,18 @@ def main():
 
         while True:
             canvas.wait_for_click()
+            x, y = get_click(canvas)
+            # restart requested
+            if restart_lvl in canvas.find_overlapping(x, y, x, y):
+                moves = 0
+                tubes, level_text, score_text, moves_text, restart_lvl = init_lvl(canvas, rules, lvl, MAX_LVL, score, moves)
+                tube1 = None
+                tube2 = None
+                selected_color = None
+                hof = []
+                start = timer()
 
-            selection_seq, tube1, tube2, selected_color = get_user_choice(canvas, tubes, selection_seq, tube1, tube2, selected_color, rules)
+            selection_seq, tube1, tube2, selected_color = get_user_choice(canvas, tubes, selection_seq, tube1, tube2, selected_color, rules, x, y)
             if selection_seq == 2 and tube2 != None:
                 # move ball
                 deselect_ball(canvas, tube1)
@@ -77,13 +86,22 @@ def main():
                             name = get_user_name(canvas, name)
                         hof = update_hof(hof_db_key, hof, hof_idx, time_taken, name)
                    
-                    if lvl < max_lvl:
+                    if lvl < MAX_LVL:
                         score += congratulations(canvas, "Nice, now try next level :)", lvl, score, moves, time_taken, hof, rules)
-                    lvl += 1
+                        lvl += 1
                     break
     congratulations(canvas, "Congratulations! YOU WON !!!", lvl, score, moves, total_time, hof, rules)
     print("Game over")
-    
+
+def get_click(canvas):
+    x = 0
+    y = 0
+    click = canvas.get_last_click()
+    if click != None:
+        x = click[0]
+        y = click[1]
+    return (x, y)
+
 def update_hof(key, hof, idx, time_taken, name):
     save = True
     if name == "":
@@ -99,7 +117,7 @@ def sort_by_time(entry):
     return entry['time']
 
 def get_hof(lvl, rules):
-    key = f"lvl_{lvl - 2}"
+    key = f"lvl_{lvl}"
     if rules == NORMAL:
         key += "-NORMAL"
     hof = db_get(key)
@@ -172,7 +190,7 @@ def get_user_name(canvas, name):
 
 def print_hof(canvas, y, lvl, hof, time, rules):
     x = CANVAS_WIDTH /2
-    canvas.create_text(x, y, f"Level {lvl - 2} Hall of Fame ({rules})", font_size = 24, anchor="center")
+    canvas.create_text(x, y, f"Level {lvl} Hall of Fame ({rules})", font_size = 24, anchor="center")
     y = y + 30
     for i in range(len(hof)):
         entry = hof[i]
@@ -183,10 +201,10 @@ def print_hof(canvas, y, lvl, hof, time, rules):
             color = "black"
         canvas.create_text(x * 2/3, y, f"{i + 1} - {str(timedelta(seconds=entry['time']))[:-3]} - {entry['name']}", font_size = 18, color=color)
     
-def intro(canvas, max_lvl):
+def intro(canvas, MAX_LVL):
     x = CANVAS_WIDTH /2
     canvas.create_text(x, CANVAS_HEIGHT * 1/3, "Sort balls by color", font_size = 72, anchor = "center", color = COLORS_AVAILABLE[0])
-    canvas.create_text(x, CANVAS_HEIGHT * 2/3, f"There are {max_lvl - 2} levels of increasing difficulty", font_size = 24, anchor = "center", color = COLORS_AVAILABLE[8])
+    canvas.create_text(x, CANVAS_HEIGHT * 2/3, f"There are {MAX_LVL} levels of increasing difficulty", font_size = 24, anchor = "center", color = COLORS_AVAILABLE[8])
     canvas.create_text(x, CANVAS_HEIGHT * 3/4, f"Click anywhere to start", font_size = 24, anchor = "center", color = COLORS_AVAILABLE[1])
 
     canvas.wait_for_click()
@@ -210,9 +228,9 @@ def finished(tubes):
 
 def choose_rules(canvas):
     canvas.clear()
-    canvas.create_text(CANVAS_WIDTH / 2, CANVAS_HEIGHT * 1 / 4, "Choose rules", anchor="center", font_size = 32)
+    canvas.create_text(CANVAS_WIDTH / 2, CANVAS_HEIGHT * 1 / 5, "Choose rules", anchor="center", font_size = 32)
 
-    y = CANVAS_HEIGHT / 2
+    y = CANVAS_HEIGHT / 2 - 50
     x_easy = CANVAS_WIDTH * 1/4
     x_normal = CANVAS_WIDTH * 3/4
 
@@ -229,15 +247,48 @@ def choose_rules(canvas):
     canvas.create_text(x_normal, y + 25, "where the last ball is the same", anchor="center", font_size = 22)
     canvas.create_text(x_normal, y + 50, "color as the currently selected one,", anchor="center", font_size = 22)
     canvas.create_text(x_normal, y + 75, "or to an empty tube", anchor="center", font_size = 22)
+    
+    canvas.create_text(CANVAS_WIDTH / 2, y + 170, "You can also start directly from one of the levels:", anchor="center", font_size = 22)
+    
+    easy_levels = draw_levels(canvas, x_easy, y + 200, COLORS_AVAILABLE[0])
+    normal_levels = draw_levels(canvas, x_normal, y + 200, COLORS_AVAILABLE[1])
 
     while True:
         canvas.wait_for_click()
-        click = canvas.get_last_click()
-        objs = canvas.find_overlapping(click[0], click[1], click[0] + 1, click[1] + 1)
+        x, y = get_click(canvas)
+        objs = canvas.find_overlapping(x, y, x, y)
+        lvl = get_clicked_lvl(easy_levels, objs)
+        if lvl > 0:
+            return (EASY, lvl)
+        lvl = get_clicked_lvl(normal_levels, objs)
+        if lvl > 0:
+            return (NORMAL, lvl)
+
         if easy in objs:
-            return EASY
+            return (EASY , 1)
         elif normal in objs:
-            return NORMAL
+            return (NORMAL, 1)
+
+def get_clicked_lvl(lst, objs):
+    lvl = 0
+    for obj in objs:
+        try:
+            lvl = lst.index(obj)
+            return lvl + 1
+        except ValueError:
+            break
+    return lvl
+
+def draw_levels(canvas, x_center, y, color):
+    lst = []
+    btn_w = 40
+    btn_h = 40
+    x_start = x_center - (MAX_LVL * btn_w ) / 2
+    for i in range(MAX_LVL):
+        x = x_start + i* btn_w
+        lst. append(canvas.create_rectangle(x, y, x + btn_w, y + 40, color, "black"))
+        canvas.create_text(x + btn_w / 2, y + btn_h / 2, f"{i + 1}", anchor="center", font_size = 22) 
+    return lst
 
 def congratulations(canvas, text, lvl, score, moves, time, hof, rules):
     canvas.clear()
@@ -252,11 +303,7 @@ def congratulations(canvas, text, lvl, score, moves, time, hof, rules):
     canvas.wait_for_click()
     return lvl_score
 
-def get_user_choice(canvas, tubes, selection_seq, tube1, tube2, selected_color, rules):
-    click = canvas.get_last_click()
-    x = int(click[0])
-    y = int(click[1])
-
+def get_user_choice(canvas, tubes, selection_seq, tube1, tube2, selected_color, rules, x, y):
     tube = select_tube(tubes, x, y)
     if tube != None:
         if selection_seq == 1: # if it is our 1st selection
@@ -311,20 +358,25 @@ def select_tube(tubes, x, y):
             return tube
     return None
 
-def init_lvl(canvas, rules, lvl, max_lvl, score, moves):
+def init_lvl(canvas, rules, lvl, MAX_LVL, score, moves):
     # set lvl between 3 and len(COLORS_AVAILABLE)
     canvas.clear()
     tubes = []
-    lvl = max(min(len(COLORS_AVAILABLE), lvl), 3)
-    picked_colors = get_random_colors(lvl)
+    picked_colors = get_random_colors(lvl + 2)
     balls = prepare_random_balls(BALLS_PER_TUBE, picked_colors)
-    tubes_needed = lvl + 2 # we need 2 more tubes
+    tubes_needed = lvl + 2 + 2 # on lvl 1 we start from 3 filled tubes (1 + 2) but also need 2 more empty ones
     draw_centered_tubes(canvas, tubes_needed, balls, tubes)
-    level_text = canvas.create_text(10, 10, f"Level: {lvl - 2} / {max_lvl - 2}", font_size = 32)
+    level_text = canvas.create_text(10, 10, f"Level: {lvl} / {MAX_LVL}", font_size = 32)
     canvas.create_text(CANVAS_WIDTH / 2, 10, f"Rules: {rules}", anchor="n", font_size = 32)
     score_text = canvas.create_text(CANVAS_WIDTH - 10, 10, get_score_text(score), font_size = 32, anchor = "ne")
     moves_text = canvas.create_text(10, CANVAS_HEIGHT - 42, get_moves_text(moves), font_size = 32)
-    return (tubes, level_text, score_text, moves_text)
+
+    x = CANVAS_WIDTH - 10
+    y = CANVAS_HEIGHT - 10
+
+    restart_lvl = canvas.create_rectangle(x - 140, y - 40, x, y, "silver")
+    canvas.create_text(x - 70, y -20, "restart lvl", font_size = 24, anchor = "center")
+    return (tubes, level_text, score_text, moves_text, restart_lvl)
 
 def prepare_random_balls(count, picked_colors):
     out = []
