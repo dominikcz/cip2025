@@ -91,7 +91,6 @@ def main():
                         lvl += 1
                     break
     congratulations(canvas, "Congratulations! YOU WON !!!", lvl, score, moves, total_time, hof, rules)
-    print("Game over")
 
 def get_click(canvas):
     x = 0
@@ -150,6 +149,7 @@ def get_user_name(canvas, name):
     y = CANVAS_HEIGHT /2
     text_x1 = x - (10*30) / 2
 
+
     dialog_shapes = []
     dialog_shapes.append(canvas.create_rectangle(x - w / 2, y, x + w / 2, y + h, "white", "black"))
     dialog_shapes.append(canvas.create_text(x, y + 30, "Please enter your name and hit [Enter]", anchor="center", font_size=28) )
@@ -207,7 +207,37 @@ def intro(canvas, MAX_LVL):
     canvas.create_text(x, CANVAS_HEIGHT * 2/3, f"There are {MAX_LVL} levels of increasing difficulty", font_size = 24, anchor = "center", color = COLORS_AVAILABLE[8])
     canvas.create_text(x, CANVAS_HEIGHT * 3/4, f"Click anywhere to start", font_size = 24, anchor = "center", color = COLORS_AVAILABLE[1])
 
-    canvas.wait_for_click()
+    yy = CANVAS_HEIGHT - 30
+    MAX_TEXT_LEN = 75
+    txt = "getting Hall of Fame..."
+    hof_obj = canvas.create_text(10, yy, f"{txt: ^75}", font_size = 22, font="Courier", color="#333", anchor="w")
+    hof_text = f"{' ' * MAX_TEXT_LEN}Hall of Fame :::  {get_hof_text(EASY)}  :::  {get_hof_text(NORMAL)}"
+    marquee(canvas, hof_obj, hof_text, MAX_TEXT_LEN, 0.15)
+
+def marquee(canvas, txt_obj, full_txt, max_len, delay):
+    idx = 0
+    while True:
+        # scroll by letters as scrolling by pixels with canvas.moveto() doesn't seem to work for text objects :(
+        idx += 1
+        if idx == len(full_txt):
+            idx = 0
+        txt = full_txt[idx:idx + max_len - 1]
+        canvas.change_text(txt_obj, txt)
+        time.sleep(delay)
+
+        if canvas.get_last_click() != None:
+            break
+
+def get_hof_text(rules):
+    txt = f"{rules}: "
+    for lvl in range(MAX_LVL):
+        hof, key = get_hof(lvl + 1, rules)
+        if len(hof) > 0:
+            txt += f"lvl {lvl + 1}: "
+            for i in range(min(len(hof), 3)):
+                entry = hof[i]
+                txt += f"{i + 1} - {str(timedelta(seconds=entry['time']))[:-3]} - {entry['name']}  ...  "
+    return txt
 
 def get_score_text(score):
     return f"Score: {score}"
