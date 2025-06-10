@@ -212,19 +212,35 @@ def intro(canvas, MAX_LVL):
     txt = "getting Hall of Fame..."
     hof_obj = canvas.create_text(10, yy, f"{txt: ^75}", font_size = 22, font="Courier", color="#333", anchor="w")
     hof_text = f"{' ' * MAX_TEXT_LEN}Hall of Fame :::  {get_hof_text(EASY)}  :::  {get_hof_text(NORMAL)}"
-    marquee(canvas, hof_obj, hof_text, MAX_TEXT_LEN, 0.15)
+    marquee(canvas, 10, yy, hof_obj, hof_text, MAX_TEXT_LEN, 0.15)
 
-def marquee(canvas, txt_obj, full_txt, max_len, delay):
+def marquee(canvas, x, y, txt_obj, full_txt, max_len, delay):
     idx = 0
+    dx = 0
+    # pixel scroll
+    txt = full_txt[idx:idx + max_len] 
     while True:
-        # scroll by letters as scrolling by pixels with canvas.moveto() doesn't seem to work for text objects :(
-        idx += 1
-        if idx == len(full_txt):
-            idx = 0
-        txt = full_txt[idx:idx + max_len - 1]
-        canvas.change_text(txt_obj, txt)
-        time.sleep(delay)
+        dx += 3
+        if dx > 13: # reset when it ends
+            dx = 0
+            idx += 1
+            if idx == len(full_txt):
+                idx = 0
+            txt = full_txt[idx:idx + max_len + 1] # we need one more letter for smoth animation
 
+        canvas.delete(txt_obj)
+        txt_obj = canvas.create_text(x - dx, y, txt, font_size = 22, font="Courier", color="#333", anchor="w")
+        time.sleep(0.001)
+
+    # letter scroll
+    # while True:
+    #     # scroll by letters as scrolling by pixels with canvas.moveto() doesn't seem to work for text objects :(
+    #     idx += 1
+    #     if idx == len(full_txt):
+    #         idx = 0
+    #     txt = full_txt[idx:idx + max_len - 1]
+    #     canvas.change_text(txt_obj, txt)
+    #     time.sleep(delay)
         if canvas.get_last_click() != None:
             break
 
