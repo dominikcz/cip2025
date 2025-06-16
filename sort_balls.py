@@ -88,7 +88,7 @@ def main():
                    
                     if lvl < MAX_LVL:
                         score += congratulations(canvas, "Nice, now try next level :)", lvl, score, moves, time_taken, hof, rules)
-                        lvl += 1
+                    lvl += 1
                     break
     congratulations(canvas, "Congratulations! YOU WON !!!", lvl, score, moves, total_time, hof, rules)
 
